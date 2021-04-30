@@ -6,33 +6,31 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.*
 import kotlin.coroutines.CoroutineContext
 
-class MainActivity : AppCompatActivity(), CoroutineScope {
-
-    override val coroutineContext: CoroutineContext
-        get() = Dispatchers.Main + job
-
-    private lateinit var job: Job
-
+class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-        job = SupervisorJob()
 
         val username: EditText = findViewById(R.id.username)
         val password: EditText = findViewById(R.id.password)
         val submit: Button = findViewById(R.id.submit)
 
         submit.setOnClickListener {
-            launch {
-                val success = withContext(Dispatchers.IO) {
+            lifecycleScope.launch {
+                //Builder of coroutines: withContext, async
+                val success = async(Dispatchers.IO) {
                     validateLogin(username.text.toString(), password.text.toString())
                 }
-                toast(if (success) "success" else "failure")
+
+                val success2 = async(Dispatchers.IO) {
+                    validateLogin2(username.text.toString(), password.text.toString())
+                }
+                toast(if (success.await() && success2.await()) "success" else "failure")
             }
         }
     }
@@ -42,8 +40,12 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         return usernane.isNotEmpty() && password.isNotEmpty()
     }
 
+    private fun validateLogin2(usernane: String, password: String): Boolean {
+        Thread.sleep(2000)
+        return usernane.isNotEmpty() && password.isNotEmpty()
+    }
+
     override fun onDestroy() {
-        job.cancel()
         super.onDestroy()
     }
 
